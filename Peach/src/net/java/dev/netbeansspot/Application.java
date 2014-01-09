@@ -98,10 +98,11 @@ public class Application extends MIDlet implements ISwitchListener {
 
 
         if (myaddress.equals("7f00.0101.0000.1001")) {
-           mydestination="7f00.0101.0000.1003";
-           mynexthop="7f00.0101.0000.1003";
-           mysink="7f00.0101.0000.1004";
-           mypayload="DADO DO NODE UM!";
+            System.out.println("ENVIANDO PACOTE DE TESTE");
+            mydestination = "7f00.0101.0000.1003";
+            mynexthop = "7f00.0101.0000.1003";
+            mysink = "7f00.0101.0000.1004";
+            mypayload = "DADO DO NODE UM!";
             Send send = new Send();
             Thread t2 = new Thread(send);
             t2.start();
@@ -152,7 +153,22 @@ public class Application extends MIDlet implements ISwitchListener {
                 xdg2.writeInt(PEACH);
                 xdg2.writeInt(999);
                 xdg2.writeInt(888);
-                //xdg.writeUTF();
+                if (mydestination != null) {
+                    xdg2.writeUTF(mydestination);
+                } else {
+                    xdg2.writeUTF("VAZIO");
+                }
+                if (mynexthop != null) {
+                    xdg2.writeUTF(mynexthop);
+                } else {
+                    xdg2.writeUTF("VAZIO");
+                }
+                if (mysink != null) {
+                    xdg2.writeUTF(mysink);
+                } else {
+                    xdg2.writeUTF("VAZIO");
+                }
+
                 tx2.send(xdg2);
             } catch (IOException ex) {
                 System.out.println("Error sending packet: " + ex);
@@ -167,7 +183,7 @@ public class Application extends MIDlet implements ISwitchListener {
 
             try {
 
-                System.out.println("ENVIO...");
+                System.out.println("RECEBENDO PACOTE!!!...");
                 tx = (RadiogramConnection) Connector.open("radiogram://broadcast:123");
                 xdg = (Radiogram) tx.newDatagram(20);
                 tx2 = (RadiogramConnection) Connector.open("radiogram://broadcast:123");
