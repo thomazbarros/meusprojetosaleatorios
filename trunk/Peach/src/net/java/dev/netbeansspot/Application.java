@@ -40,9 +40,12 @@ public class Application extends MIDlet implements ISwitchListener {
     private RadiogramConnection tx = null, tx2 = null, rx = null;
     private Radiogram xdg, xdg2, rdg;
     private Hashtable um = null, dois = null, tres = null, quatro = null;
-    private String myaddress, mysink, mydestination, mynexthop, mypayload;
-    private String rcvaddress, rcvsink, rcvdestination, rcvpayload;
-    private Vector payload = null;
+    private Hashtable umCost = null, doisCost = null, tresCost = null, quatroCost = null;
+    private String myaddress = null, mysink = null, mydestination = null, mynexthop = null, mypayload = null, toSend = null;
+    private String rcvsink = null, rcvnexthop = null, rcvpayload = null;
+    private String clusterHead = null;
+    private Vector cluster = null;
+    private long now, mydelay;
     //private IRadioPolicyManager rpm = (IRadioPolicyManager)Resources.lookup(IRadioPolicyManager.class);
     //private IEEEAddress myAddr = new IEEEAddress(rpm.getIEEEAddress());
 
@@ -66,28 +69,55 @@ public class Application extends MIDlet implements ISwitchListener {
 
         myaddress = IEEEAddress.toDottedHex(RadioFactory.getRadioPolicyManager().getIEEEAddress());
         System.out.println("*******AQUI********:" + myaddress);
-        payload = new Vector();
         um = new Hashtable();
         um.put("7f00.0101.0000.1002", "7f00.0101.0000.1002");
         um.put("7f00.0101.0000.1003", "7f00.0101.0000.1003");
         um.put("7f00.0101.0000.1004", "7f00.0101.0000.1003");
+
+        umCost = new Hashtable();
+        umCost.put("7f00.0101.0000.1001", new Integer(0));
+        umCost.put("7f00.0101.0000.1002", new Integer(1));
+        umCost.put("7f00.0101.0000.1003", new Integer(1));
+        umCost.put("7f00.0101.0000.1004", new Integer(1000));
+
 
         dois = new Hashtable();
         dois.put("7f00.0101.0000.1001", "7f00.0101.0000.1001");
         dois.put("7f00.0101.0000.1003", "7f00.0101.0000.1003");
         dois.put("7f00.0101.0000.1004", "7f00.0101.0000.1003");
 
+        doisCost = new Hashtable();
+        doisCost.put("7f00.0101.0000.1001", new Integer(1));
+        doisCost.put("7f00.0101.0000.1002", new Integer(0));
+        doisCost.put("7f00.0101.0000.1003", new Integer(1));
+        doisCost.put("7f00.0101.0000.1004", new Integer(1000));
+
+
         tres = new Hashtable();
         tres.put("7f00.0101.0000.1001", "7f00.0101.0000.1001");
         tres.put("7f00.0101.0000.1002", "7f00.0101.0000.1002");
         tres.put("7f00.0101.0000.1004", "7f00.0101.0000.1004");
+
+        tresCost = new Hashtable();
+        tresCost.put("7f00.0101.0000.1001", new Integer(1));
+        tresCost.put("7f00.0101.0000.1002", new Integer(1));
+        tresCost.put("7f00.0101.0000.1003", new Integer(0));
+        tresCost.put("7f00.0101.0000.1004", new Integer(1));
+
+
 
         quatro = new Hashtable();
         quatro.put("7f00.0101.0000.1001", "7f00.0101.0000.1003");
         quatro.put("7f00.0101.0000.1002", "7f00.0101.0000.1003");
         quatro.put("7f00.0101.0000.1003", "7f00.0101.0000.1003");
 
-        System.out.println("Broadcast Counter MIDlet");
+        quatroCost = new Hashtable();
+        quatroCost.put("7f00.0101.0000.1001", new Integer(1000));
+        quatroCost.put("7f00.0101.0000.1002", new Integer(1000));
+        quatroCost.put("7f00.0101.0000.1003", new Integer(1));
+        quatroCost.put("7f00.0101.0000.1004", new Integer(1000));
+
+        System.out.println("Início!");
         showColor(color);
         sw1.addISwitchListener(this);
         sw2.addISwitchListener(this);
@@ -99,10 +129,12 @@ public class Application extends MIDlet implements ISwitchListener {
 
         if (myaddress.equals("7f00.0101.0000.1001")) {
             System.out.println("ENVIANDO PACOTE DE TESTE");
-            mydestination = "7f00.0101.0000.1003";
             mynexthop = "7f00.0101.0000.1003";
             mysink = "7f00.0101.0000.1004";
             mypayload = "DADO DO NODE UM!";
+            clusterHead = mynexthop;
+            cluster.addElement(myaddress);
+            cluster.addElement(mynexthop);
             Send send = new Send();
             Thread t2 = new Thread(send);
             t2.start();
@@ -196,26 +228,26 @@ public class Application extends MIDlet implements ISwitchListener {
                         int cmd = rdg.readInt();
                         int newCount = rdg.readInt();
                         int newColor = rdg.readInt();
-                        rcvdestination = rdg.getAddress();
-                        //rcvsink = rdg.readUTF();
-                        //rcvdestination = rdg.readUTF();
-                        //rcvpayload = rdg.readUTF();
-                        //destination = rdg.readUTF();
+                        rcvnexthop = rdg.readUTF();
+                        rcvsink = rdg.readUTF();
+                        rcvpayload = rdg.readUTF();
+
                         if (cmd == CHANGE_COLOR) {
                             System.out.println("Received packet from " + rdg.getAddress());
                             // System.out.println("MYADDRESS: "+rdg.readUTF());
                             showColor(newColor);
                         } else if (cmd == PEACH) {
-                            //             if(rcvsink.equals(myaddress)){
                             System.out.println("CONSUMINDO PACOTE!");
                             System.out.println("Sou: " + myaddress);
                             System.out.println("Destino final: " + rcvsink);
                             System.out.println("Origem: ");
                             System.out.println("newCount: " + newCount);
                             System.out.println("newColor: " + newColor);
+                            System.out.println("Next Hop: " + rcvnexthop);
+                            System.out.println("Sink: " + rcvsink);
                             System.out.println("Conteúdo: " + rcvpayload);
                             System.out.println("##### FIM #####");
-                            //           }
+
                             location_unware();
                         } else {
                             showCount(newCount, newColor);
@@ -235,24 +267,170 @@ public class Application extends MIDlet implements ISwitchListener {
     }
 
     public void location_unware() {
-        if (rcvdestination.equals(myaddress)) {
+        if (clusterHead == null) {
+            clusterHead = rcvnexthop;
+            mysink = rcvsink;
+            cluster.addElement(rdg.getAddress());
+            cluster.addElement(clusterHead);
+        } else if (!rcvnexthop.equals(clusterHead)) {
+            return;
+        }
+
+
+        if (clusterHead.equals(myaddress)) {
             mynexthop = rcvsink;
             formCluster(DELAY);
             if (mynexthop.equals(rcvsink)) {
-                //selecionar para quem enviar a partir das tabelas
+                mynexthop = getRoute(mysink);
             }
+            mysink = rcvsink;
+            mydestination = mysink;
+            Send send = new Send();
+            Thread t3 = new Thread(send);
+            t3.start();
             //enviar pacote
         } else {
             joinCluster();
-            if (!payload.isEmpty()) {
-                //enviar pacotes
+            if (toSend != null) {
+                mypayload = toSend;
+                Send send2 = new Send();
+                Thread t3 = new Thread(send2);
+                t3.start();
             }
+
         }
     }
 
     public void formCluster(int delay) {
+
+        now = System.currentTimeMillis();
+
+        while ((System.currentTimeMillis() - now) <= delay) {
+
+            if (clusterHead.equals(myaddress)) {
+                toSend += rcvpayload;
+            } else {
+                if (isWorthIt(myaddress, clusterHead, rcvnexthop)) {
+                    joinCluster();
+                }
+            }
+
+            readAgain();
+
+
+        }
+        
     }
 
     public void joinCluster() {
+        mynexthop = clusterHead;
+    }
+
+    public void readAgain() {
+        try {
+            rx.receive(rdg);
+            int cmd = rdg.readInt();
+            int newCount = rdg.readInt();
+            int newColor = rdg.readInt();
+            rcvnexthop = rdg.readUTF();
+            rcvsink = rdg.readUTF();
+            rcvpayload = rdg.readUTF();
+
+            if (cmd == CHANGE_COLOR) {
+                System.out.println("Received packet from " + rdg.getAddress());
+                // System.out.println("MYADDRESS: "+rdg.readUTF());
+                showColor(newColor);
+            } else if (cmd == PEACH) {
+                System.out.println("CONSUMINDO PACOTE!");
+                System.out.println("Sou: " + myaddress);
+                System.out.println("Destino final: " + rcvsink);
+                System.out.println("Origem: ");
+                System.out.println("newCount: " + newCount);
+                System.out.println("newColor: " + newColor);
+                System.out.println("Next Hop: " + rcvnexthop);
+                System.out.println("Sink: " + rcvsink);
+                System.out.println("Conteúdo: " + rcvpayload);
+                System.out.println("##### FIM #####");
+
+                location_unware();
+            } else {
+                showCount(newCount, newColor);
+
+            }
+        } catch (IOException ex) {
+            System.out.println("Error receiving packet: " + ex);
+            ex.printStackTrace();
+        }
+    }
+
+    public String getRoute(String dest) {
+
+        if (myaddress.equals("7f00.0101.0000.1001")) {
+            return (String) um.get(dest);
+        } else if (myaddress.equals("7f00.0101.0000.1002")) {
+            return (String) dois.get(dest);
+        } else if (myaddress.equals("7f00.0101.0000.1003")) {
+            return (String) tres.get(dest);
+        } else if (myaddress.equals("7f00.0101.0000.1004")) {
+            return (String) quatro.get(dest);
+        }
+        return "ERRO";
+    }
+
+    public boolean isWorthIt(String myaddr, String clusterhd, String nexthp) {
+        Hashtable addr = whichHashCost(myaddr);
+        // Hashtable clsterhd = whichHashCost(clusterhd);
+        // Hashtable nxthp = whichHashCost(nexthp);
+        //if ((addr.get(myaddr) == null) || (clsterhd.get(clusterhd) == null) || (nxthp.get(nexthp) == null)) {
+        if (addr == null) {
+            return false;
+        }
+        if ((addr.get(clusterhd) == null) || (addr.get(nexthp) == null)) {
+            return false;
+        }
+        int temp1 = ((Integer) addr.get(clusterhd)).intValue();
+        int temp2 = ((Integer) addr.get(nexthp)).intValue();
+        if (temp1 <= temp2) {
+            return true;
+        } else {
+            return false;
+        }
+
+    }
+
+    public boolean isWorthIt(String dest) {
+        Integer temp1 = (Integer) whichHashCost(myaddress).get(myaddress);
+        Integer temp2 = (Integer) whichHashCost(rcvnexthop).get(rcvnexthop);
+        if (temp1.intValue() <= temp2.intValue()) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public Hashtable whichHashNode(String address) {
+        if (address.equals("7f00.0101.0000.1001")) {
+            return um;
+        } else if (address.equals("7f00.0101.0000.1002")) {
+            return dois;
+        } else if (address.equals("7f00.0101.0000.1003")) {
+            return tres;
+        } else if (address.equals("7f00.0101.0000.1004")) {
+            return quatro;
+        }
+        return null;
+    }
+
+    public Hashtable whichHashCost(String address) {
+        if (address.equals("7f00.0101.0000.1001")) {
+            return umCost;
+        } else if (address.equals("7f00.0101.0000.1002")) {
+            return doisCost;
+        } else if (address.equals("7f00.0101.0000.1003")) {
+            return tresCost;
+        } else if (address.equals("7f00.0101.0000.1004")) {
+            return quatroCost;
+        }
+        return null;
     }
 }
